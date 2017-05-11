@@ -11,15 +11,15 @@ envoy_cc_binary(
     name = "envoy",
     repository = "@envoy",
     deps = [
-        ":echo2_config",
+        ":extauth_config",
         "@envoy//source/exe:envoy_main_lib",
     ],
 )
 
 envoy_cc_library(
-    name = "echo2_lib",
-    srcs = ["echo2.cc"],
-    hdrs = ["echo2.h"],
+    name = "extauth_lib",
+    srcs = ["extauth.cc"],
+    hdrs = ["extauth.h"],
     repository = "@envoy",
     deps = [
         "@envoy//include/envoy/buffer:buffer_interface",
@@ -31,23 +31,23 @@ envoy_cc_library(
 )
 
 envoy_cc_library(
-    name = "echo2_config",
-    srcs = ["echo2_config.cc"],
+    name = "extauth_config",
+    srcs = ["extauth_config.cc"],
     repository = "@envoy",
     deps = [
-        ":echo2_lib",
+        ":extauth_lib",
         "@envoy//include/envoy/network:connection_interface",
         "@envoy//source/server:configuration_lib",
     ],
 )
 
 envoy_cc_test(
-    name = "echo2_integration_test",
-    srcs = ["echo2_integration_test.cc"],
-    data =  ["echo2_server.json"],
+    name = "extauth_integration_test",
+    srcs = ["extauth_integration_test.cc"],
+    data =  ["extauth_server.json"],
     repository = "@envoy",
     deps = [
-        ":echo2_config",
+        ":extauth_config",
         "@envoy//test/integration:integration_lib"
     ],
 )

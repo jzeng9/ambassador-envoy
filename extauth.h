@@ -9,7 +9,7 @@ namespace Filter {
 /**
  * Implementation of a basic echo filter.
  */
-class Echo2 : public Network::ReadFilter, Logger::Loggable<Logger::Id::filter> {
+class ExtAuth : public Network::ReadFilter, Logger::Loggable<Logger::Id::filter> {
 public:
   // Network::ReadFilter
   Network::FilterStatus onData(Buffer::Instance& data) override;

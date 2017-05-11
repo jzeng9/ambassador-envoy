@@ -1,13 +1,13 @@
 #include "test/integration/integration.h"
 #include "test/integration/utility.h"
 
-class Echo2IntegrationTest : public BaseIntegrationTest, public testing::Test {
+class ExtAuthIntegrationTest : public BaseIntegrationTest, public testing::Test {
 public:
   /**
    * Global initializer for all integration tests.
    */
   static void SetUpTestCase() {
-    createTestServer("echo2_server.json", {"echo"});
+    createTestServer("extauth_server.json", {"extauth"});
   }
 
   /**
@@ -18,10 +18,10 @@ public:
   }
 };
 
-TEST_F(Echo2IntegrationTest, Echo) {
+TEST_F(ExtAuthIntegrationTest, DoAuth) {
   Buffer::OwnedImpl buffer("hello");
   std::string response;
-  RawConnectionDriver connection(lookupPort("echo"), buffer,
+  RawConnectionDriver connection(lookupPort("extauth"), buffer,
                                  [&](Network::ClientConnection&, const Buffer::Instance& data)
                                      -> void {
                                        response.append(TestUtility::bufferToString(data));

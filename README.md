@@ -1,7 +1,7 @@
 # Envoy filter example
 
 This project demonstrates the linking of additional filters with the Envoy binary.
-A new filter `echo2` is introduced, identical modulo renaming to the existing
+A new filter `extauth` is introduced, identical modulo renaming to the existing
 [`echo`](https://github.com/lyft/envoy/blob/master/source/common/filter/echo.h)
 filter. Integration tests demonstrating the filter's end-to-end behavior are
 also provided.
@@ -15,9 +15,9 @@ To build the Envoy static binary:
 
 ## Testing
 
-To run the `echo2` integration test:
+To run the `extauth` integration test:
 
-`bazel test //:echo2_integration_test`
+`bazel test //:extauth_integration_test`
 
 To run the regular Envoy tests from this project:
 
@@ -30,5 +30,5 @@ The [`WORKSPACE`](WORKSPACE) file maps the `@envoy` repository to this local pat
 
 The [`BUILD`](BUILD) file introduces a new Envoy static binary target, `envoy`,
 that links together the new filter and `@envoy//source/exe:envoy_main_lib`. The
-`echo2` filter registers itself during the static initialization phase of the
+`extauth` filter registers itself during the static initialization phase of the
 Envoy binary as a new filter.
