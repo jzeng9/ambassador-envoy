@@ -26,7 +26,7 @@ public:
 /**
  * Static registration for the echo filter. @see RegisterNetworkFilterConfigFactory.
  */
-static RegisterNetworkFilterConfigFactory<extauthConfigFactory> registered_;
+static RegisterNetworkFilterConfigFactory<ExtAuthConfigFactory> registered_;
 
 } // Configuration
 } // Server
