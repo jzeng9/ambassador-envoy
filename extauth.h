@@ -1,25 +1,63 @@
 #pragma once
 
-#include "envoy/network/filter.h"
+#include "envoy/http/filter.h"
 
 #include "common/common/logger.h"
 
-namespace Filter {
+namespace Envoy {
+namespace Http {
 
 /**
- * Implementation of a basic echo filter.
+ * All stats for the extauth filter. @see stats_macros.h
  */
-class ExtAuth : public Network::ReadFilter, Logger::Loggable<Logger::Id::filter> {
-public:
-  // Network::ReadFilter
-  Network::FilterStatus onData(Buffer::Instance& data) override;
-  Network::FilterStatus onNewConnection() override { return Network::FilterStatus::Continue; }
-  void initializeReadFilterCallbacks(Network::ReadFilterCallbacks& callbacks) override {
-    read_callbacks_ = &callbacks;
-  }
+// clang-format off
+#define ALL_EXTAUTH_STATS(COUNTER)                                                           \
+  COUNTER(rq_handled)
+// clang-format on
 
-private:
-  Network::ReadFilterCallbacks* read_callbacks_{};
+/**
+ * Wrapper struct for extauth filter stats. @see stats_macros.h
+ */
+struct ExtAuthStats {
+  ALL_EXTAUTH_STATS(GENERATE_COUNTER_STRUCT)
 };
 
-} // Filter
+/**
+ * Configuration for the extauth filter.
+ */
+struct ExtAuthConfig {
+  ExtAuthStats stats_;
+  uint64_t unused_;
+};
+
+typedef std::shared_ptr<const ExtAuthConfig> ExtAuthConfigConstSharedPtr;
+
+/**
+ * A pass-through filter that talks to an external authn/authz service (or will soon...)
+ */
+class ExtAuth : public StreamDecoderFilter {
+public:
+  ExtAuth(ExtAuthConfigConstSharedPtr config);
+  ~ExtAuth();
+
+  static ExtAuthStats generateStats(const std::string& prefix, Stats::Store& store);
+
+  // Http::StreamFilterBase
+  void onDestroy() override;
+
+  // Http::StreamDecoderFilter
+  FilterHeadersStatus decodeHeaders(HeaderMap& headers, bool end_stream) override;
+  FilterDataStatus decodeData(Buffer::Instance& data, bool end_stream) override;
+  FilterTrailersStatus decodeTrailers(HeaderMap& trailers) override;
+  void setDecoderFilterCallbacks(StreamDecoderFilterCallbacks& callbacks) override;
+
+private:
+  void resetInternalState();
+
+  ExtAuthConfigConstSharedPtr config_;
+  StreamDecoderFilterCallbacks* callbacks_{};
+  Event::TimerPtr request_timeout_;
+};
+
+} // Http
+} // Envoy

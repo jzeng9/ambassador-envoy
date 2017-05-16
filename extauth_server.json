@@ -1,23 +1,22 @@
 {
   "listeners": [
-  {
-    "address": "tcp://127.0.0.1:0",
-    "use_original_dst": true,
-    "filters": [
-      { "type": "read", "name": "ratelimit",
-        "config": {
-          "domain": "foo",
-          "descriptors": [[{"key": "foo", "value": "bar"}]],
-          "stat_prefix": "name"
+    {
+      "address": "tcp://127.0.0.1:9999",
+      "use_original_dst": true,
+      "filters": [
+        {
+          "type": "decoder",
+          "name": "extauth",
+          "config": {
+            "unused": 0
+          }
         }
-      },
-      { "type": "read", "name": "extauth", "config": {} }
-    ]
-  }],
+      ]
+    }],
 
   "admin": { "access_log_path": "/dev/null", "profile_path": "{{ test_tmpdir }}/envoy.prof", "address": "tcp://127.0.0.1:0" },
 
   "cluster_manager": {
-      "clusters": []
+    "clusters": []
   }
 }

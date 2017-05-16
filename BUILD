@@ -23,8 +23,7 @@ envoy_cc_library(
     repository = "@envoy",
     deps = [
         "@envoy//include/envoy/buffer:buffer_interface",
-        "@envoy//include/envoy/network:connection_interface",
-        "@envoy//include/envoy/network:filter_interface",
+        "@envoy//include/envoy/http:filter_interface",
         "@envoy//source/common/common:assert_lib",
         "@envoy//source/common/common:logger_lib",
     ],
@@ -33,11 +32,12 @@ envoy_cc_library(
 envoy_cc_library(
     name = "extauth_config",
     srcs = ["extauth_config.cc"],
+    hdrs = ["extauth_config.h"],
     repository = "@envoy",
     deps = [
         ":extauth_lib",
-        "@envoy//include/envoy/network:connection_interface",
         "@envoy//source/server:configuration_lib",
+        "@envoy//source/server/config/network:http_connection_manager_lib"
     ],
 )
 
@@ -48,6 +48,8 @@ envoy_cc_test(
     repository = "@envoy",
     deps = [
         ":extauth_config",
-        "@envoy//test/integration:integration_lib"
+        "@envoy//test/mocks/buffer:buffer_mocks",
+        "@envoy//test/mocks/http:http_mocks",
+        "@envoy//test/mocks/upstream:upstream_mocks"
     ],
 )

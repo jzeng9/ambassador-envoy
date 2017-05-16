@@ -1,17 +1,49 @@
 #include "extauth.h"
 
-#include "envoy/buffer/buffer.h"
-#include "envoy/network/connection.h"
-
 #include "common/common/assert.h"
 
-namespace Filter {
+namespace Envoy {
+namespace Http {
 
-Network::FilterStatus ExtAuth::onData(Buffer::Instance& data) {
-  conn_log_trace("echo: got {} bytes", read_callbacks_->connection(), data.length());
-  read_callbacks_->connection().write(data);
-  ASSERT(0 == data.length());
-  return Network::FilterStatus::StopIteration;
+ExtAuth::ExtAuth(ExtAuthConfigConstSharedPtr config) : config_(config) {}
+
+ExtAuth::~ExtAuth() { ASSERT(!request_timeout_); }
+
+FilterHeadersStatus ExtAuth::decodeHeaders(HeaderMap&, bool end_stream) {
+  config_->stats_.rq_handled_.inc();
+  if (end_stream) {
+    // This is a header only request
+    return FilterHeadersStatus::Continue;
+  } else {
+    // This request has body data
+    return FilterHeadersStatus::Continue;
+  }
 }
 
-} // Filter
+FilterDataStatus ExtAuth::decodeData(Buffer::Instance&, bool end_stream) {
+  if (end_stream) {
+    resetInternalState();
+  }
+  return FilterDataStatus::Continue;
+}
+
+FilterTrailersStatus ExtAuth::decodeTrailers(HeaderMap&) {
+  resetInternalState();
+  return FilterTrailersStatus::Continue;
+}
+
+ExtAuthStats ExtAuth::generateStats(const std::string& prefix, Stats::Store& store) {
+  std::string final_prefix = prefix + "extauth.";
+  return {ALL_EXTAUTH_STATS(POOL_COUNTER_PREFIX(store, final_prefix))};
+}
+
+void ExtAuth::onDestroy() { resetInternalState(); }
+
+void ExtAuth::resetInternalState() {}
+
+void ExtAuth::setDecoderFilterCallbacks(StreamDecoderFilterCallbacks& callbacks) {
+  callbacks_ = &callbacks;
+}
+
+} // Http
+} // Envoy

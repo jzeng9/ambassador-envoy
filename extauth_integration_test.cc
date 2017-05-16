@@ -1,33 +1,47 @@
-#include "test/integration/integration.h"
-#include "test/integration/utility.h"
+#include "extauth.h"
+#include "common/http/header_map_impl.h"
+#include "common/stats/stats_impl.h"
 
-class ExtAuthIntegrationTest : public BaseIntegrationTest, public testing::Test {
+#include "test/mocks/buffer/mocks.h"
+#include "test/mocks/http/mocks.h"
+#include "test/mocks/upstream/host.h"
+
+namespace Envoy {
+using testing::NiceMock;
+using testing::InSequence;
+
+namespace Http {
+
+class ExtAuthTest : public testing::Test {
 public:
-  /**
-   * Global initializer for all integration tests.
-   */
-  static void SetUpTestCase() {
-    createTestServer("extauth_server.json", {"extauth"});
+  ExtAuthTest()
+      : config_{new ExtAuthConfig{ExtAuth::generateStats("", store_), 0}}, filter_(config_) {
+    filter_.setDecoderFilterCallbacks(callbacks_);
   }
 
-  /**
-   * Global destructor for all integration tests.
-   */
-  static void TearDownTestCase() {
-    test_server_.reset();
-  }
+  NiceMock<MockStreamDecoderFilterCallbacks> callbacks_;
+  Stats::IsolatedStoreImpl store_;
+  std::shared_ptr<ExtAuthConfig> config_;
+  ExtAuth filter_;
 };
 
-TEST_F(ExtAuthIntegrationTest, DoAuth) {
-  Buffer::OwnedImpl buffer("hello");
-  std::string response;
-  RawConnectionDriver connection(lookupPort("extauth"), buffer,
-                                 [&](Network::ClientConnection&, const Buffer::Instance& data)
-                                     -> void {
-                                       response.append(TestUtility::bufferToString(data));
-                                       connection.close();
-                                     });
-
-  connection.run();
-  EXPECT_EQ("hello", response);
+TEST_F(ExtAuthTest, HeaderOnlyRequest) {
+  TestHeaderMapImpl headers;
+  EXPECT_EQ(FilterHeadersStatus::Continue, filter_.decodeHeaders(headers, true));
 }
+
+TEST_F(ExtAuthTest, RequestWithData) {
+  InSequence s;
+
+  TestHeaderMapImpl headers;
+  EXPECT_EQ(FilterHeadersStatus::Continue, filter_.decodeHeaders(headers, false));
+
+  Buffer::OwnedImpl data1("hello");
+  EXPECT_EQ(FilterDataStatus::Continue, filter_.decodeData(data1, false));
+
+  Buffer::OwnedImpl data2(" world");
+  EXPECT_EQ(FilterDataStatus::Continue, filter_.decodeData(data2, true));
+}
+
+} // Http
+} // Envoy
