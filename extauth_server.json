@@ -5,10 +5,45 @@
       "use_original_dst": true,
       "filters": [
         {
-          "type": "decoder",
-          "name": "extauth",
+          "type": "read",
+          "name": "http_connection_manager",
           "config": {
-            "unused": 0
+            "codec_type": "auto",
+            "stat_prefix": "ingress_http",
+            "access_log": [
+              {
+                "path": "/tmp/access_log"
+              }
+            ],
+            "route_config": {
+              "virtual_hosts": [
+                {
+                  "name": "httpbin",
+                  "domains": ["*"],
+                  "routes": [
+                    {
+                      "prefix": "/",
+                      "cluster": "httpbin",
+                      "auto_host_rewrite": true
+                    }
+                  ]
+                }
+              ]
+            },
+            "filters": [
+              {
+                "type": "decoder",
+                "name": "extauth",
+                "config": {
+                  "unused": 0
+                }
+              },
+              {
+                "type": "decoder",
+                "name": "router",
+                "config": {}
+              }
+            ]
           }
         }
       ]
@@ -17,6 +52,18 @@
   "admin": { "access_log_path": "/dev/null", "profile_path": "{{ test_tmpdir }}/envoy.prof", "address": "tcp://127.0.0.1:0" },
 
   "cluster_manager": {
-    "clusters": []
+    "clusters": [
+      {
+        "name": "httpbin",
+        "type": "logical_dns",
+        "connect_timeout_ms": 5000,
+        "lb_type": "random",
+        "hosts": [
+          {
+            "url": "tcp://httpbin.org:80"
+          }
+        ]
+      }
+    ]
   }
 }
