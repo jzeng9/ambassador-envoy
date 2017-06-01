@@ -60,9 +60,11 @@ private:
   void rejectRequest();
   void redirectRequest();
 
+  void onAuthResult(/* Http::HeaderMapPtr&& headers */);
+
   ExtAuthConfigConstSharedPtr config_;
   StreamDecoderFilterCallbacks* callbacks_{};
-  Event::TimerPtr request_timeout_;
+  Event::TimerPtr delay_timer_;
 };
 
 } // Http
