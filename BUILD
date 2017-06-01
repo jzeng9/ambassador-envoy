@@ -26,6 +26,8 @@ envoy_cc_library(
         "@envoy//include/envoy/http:filter_interface",
         "@envoy//source/common/common:assert_lib",
         "@envoy//source/common/common:logger_lib",
+        "@envoy//source/common/http:headers_lib",
+        "@envoy//source/common/http:header_map_lib"
     ],
 )
 

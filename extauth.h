@@ -11,8 +11,11 @@ namespace Http {
  * All stats for the extauth filter. @see stats_macros.h
  */
 // clang-format off
-#define ALL_EXTAUTH_STATS(COUNTER)                                                           \
-  COUNTER(rq_handled)
+#define ALL_EXTAUTH_STATS(COUNTER)                                                                 \
+  COUNTER(rq_failed)                                                                               \
+  COUNTER(rq_passed)                                                                               \
+  COUNTER(rq_rejected)                                                                             \
+  COUNTER(rq_redirected)
 // clang-format on
 
 /**
@@ -35,7 +38,7 @@ typedef std::shared_ptr<const ExtAuthConfig> ExtAuthConfigConstSharedPtr;
 /**
  * A pass-through filter that talks to an external authn/authz service (or will soon...)
  */
-class ExtAuth : public StreamDecoderFilter {
+class ExtAuth : Logger::Loggable<Logger::Id::filter>, public StreamDecoderFilter {
 public:
   ExtAuth(ExtAuthConfigConstSharedPtr config);
   ~ExtAuth();
@@ -53,6 +56,9 @@ public:
 
 private:
   void resetInternalState();
+  void acceptRequest();
+  void rejectRequest();
+  void redirectRequest();
 
   ExtAuthConfigConstSharedPtr config_;
   StreamDecoderFilterCallbacks* callbacks_{};
