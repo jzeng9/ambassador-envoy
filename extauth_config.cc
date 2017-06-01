@@ -11,9 +11,9 @@ const std::string EXTAUTH_HTTP_FILTER_SCHEMA(R"EOF(
     "$schema": "http://json-schema.org/schema#",
     "type" : "object",
     "properties" : {
-      "unused" : {"type" : "integer"}
+      "url" : {"type" : "string"}
     },
-    "required" : ["unused"],
+    "required" : ["url"],
     "additionalProperties" : false
   }
   )EOF");
@@ -29,9 +29,8 @@ HttpFilterFactoryCb ExtAuthConfig::tryCreateFilterFactory(HttpFilterType type,
 
   json_config.validateSchema(EXTAUTH_HTTP_FILTER_SCHEMA);
 
-  Http::ExtAuthConfigConstSharedPtr config(
-      new Http::ExtAuthConfig{Http::ExtAuth::generateStats(stats_prefix, server.stats()),
-                              static_cast<uint64_t>(json_config.getInteger("unused"))});
+  Http::ExtAuthConfigConstSharedPtr config(new Http::ExtAuthConfig{
+      Http::ExtAuth::generateStats(stats_prefix, server.stats()), json_config.getString("url")});
   return [config](Http::FilterChainFactoryCallbacks& callbacks) -> void {
     callbacks.addStreamDecoderFilter(Http::StreamDecoderFilterSharedPtr{new Http::ExtAuth(config)});
   };

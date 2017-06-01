@@ -30,7 +30,7 @@ struct ExtAuthStats {
  */
 struct ExtAuthConfig {
   ExtAuthStats stats_;
-  uint64_t unused_;
+  std::string url_;
 };
 
 typedef std::shared_ptr<const ExtAuthConfig> ExtAuthConfigConstSharedPtr;

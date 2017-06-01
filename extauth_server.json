@@ -35,7 +35,7 @@
                 "type": "decoder",
                 "name": "extauth",
                 "config": {
-                  "unused": 0
+                  "url": "http://httpbin.org/"
                 }
               },
               {
