@@ -14,24 +14,29 @@ ExtAuth::ExtAuth(ExtAuthConfigConstSharedPtr config) : config_(config) {}
 ExtAuth::~ExtAuth() { ASSERT(!delay_timer_); }
 
 FilterHeadersStatus ExtAuth::decodeHeaders(HeaderMap&, bool) {
+  log().info("ExtAuth Request received; contacting auth server");
+
   // Request external authentication
+  auth_complete_ = false;
   delay_timer_ = callbacks_->dispatcher().createTimer([this]() -> void { onAuthResult(); });
-  delay_timer_->enableTimer(std::chrono::milliseconds(1000));
+  delay_timer_->enableTimer(std::chrono::milliseconds(1500));
 
   // Stop until we have a result
   return FilterHeadersStatus::StopIteration;
 }
 
-FilterDataStatus ExtAuth::decodeData(Buffer::Instance&, bool end_stream) {
-  if (end_stream) {
-    resetInternalState();
+FilterDataStatus ExtAuth::decodeData(Buffer::Instance&, bool) {
+  if (auth_complete_) {
+    return FilterDataStatus::Continue;
   }
-  return FilterDataStatus::Continue;
+  return FilterDataStatus::StopIterationAndBuffer;
 }
 
 FilterTrailersStatus ExtAuth::decodeTrailers(HeaderMap&) {
-  resetInternalState();
-  return FilterTrailersStatus::Continue;
+  if (auth_complete_) {
+    return FilterTrailersStatus::Continue;
+  }
+  return FilterTrailersStatus::StopIteration;
 }
 
 ExtAuthStats ExtAuth::generateStats(const std::string& prefix, Stats::Store& store) {
@@ -41,6 +46,7 @@ ExtAuthStats ExtAuth::generateStats(const std::string& prefix, Stats::Store& sto
 
 void ExtAuth::acceptRequest() {
   log().info("ExtAuth accepting request");
+  auth_complete_ = true;
   config_->stats_.rq_passed_.inc();
   callbacks_->continueDecoding();
 }

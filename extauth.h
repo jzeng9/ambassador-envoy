@@ -64,6 +64,7 @@ private:
 
   ExtAuthConfigConstSharedPtr config_;
   StreamDecoderFilterCallbacks* callbacks_{};
+  bool auth_complete_;
   Event::TimerPtr delay_timer_;
 };
 
