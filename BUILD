@@ -24,10 +24,12 @@ envoy_cc_library(
     deps = [
         "@envoy//include/envoy/buffer:buffer_interface",
         "@envoy//include/envoy/http:filter_interface",
+        "@envoy//include/envoy/upstream:cluster_manager_interface",
         "@envoy//source/common/common:assert_lib",
         "@envoy//source/common/common:logger_lib",
-        "@envoy//source/common/http:headers_lib",
-        "@envoy//source/common/http:header_map_lib"
+        "@envoy//source/common/common:enum_to_int",
+        "@envoy//source/common/http:message_lib",
+        "@envoy//source/common/http:utility_lib"
     ],
 )
 

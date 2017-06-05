@@ -1,8 +1,9 @@
 #include "extauth.h"
 
 #include "common/common/assert.h"
-#include "common/http/header_map_impl.h"
-#include "common/http/headers.h"
+#include "common/common/enum_to_int.h"
+#include "common/http/message_impl.h"
+#include "common/http/utility.h"
 
 namespace Envoy {
 namespace Http {
@@ -11,15 +12,25 @@ static LowerCaseString header_to_add(std::string("x-ark3-stuff"));
 
 ExtAuth::ExtAuth(ExtAuthConfigConstSharedPtr config) : config_(config) {}
 
-ExtAuth::~ExtAuth() { ASSERT(!delay_timer_); }
+ExtAuth::~ExtAuth() {
+  ASSERT(!delay_timer_);
+  ASSERT(!auth_request_);
+}
 
 FilterHeadersStatus ExtAuth::decodeHeaders(HeaderMap&, bool) {
   log().info("ExtAuth Request received; contacting auth server");
 
   // Request external authentication
   auth_complete_ = false;
-  delay_timer_ = callbacks_->dispatcher().createTimer([this]() -> void { onAuthResult(); });
-  delay_timer_->enableTimer(std::chrono::milliseconds(1500));
+  MessagePtr request(new RequestMessageImpl());
+  request->headers().insertMethod().value(Http::Headers::get().MethodValues.Get);
+  request->headers().insertPath().value(std::string("/get"));
+  request->headers().insertHost().value(config_->cluster_); // cluster name is Host: header value!
+  auth_request_ =
+      config_->cm_.httpAsyncClientForCluster(config_->cluster_)
+          .send(std::move(request), *this, Optional<std::chrono::milliseconds>(config_->timeout_));
+  // .send(...) -> onSuccess(...) or onFailure(...)
+  // This handle can be used to .cancel() the request.
 
   // Stop until we have a result
   return FilterHeadersStatus::StopIteration;
@@ -42,6 +53,24 @@ FilterTrailersStatus ExtAuth::decodeTrailers(HeaderMap&) {
 ExtAuthStats ExtAuth::generateStats(const std::string& prefix, Stats::Store& store) {
   std::string final_prefix = prefix + "extauth.";
   return {ALL_EXTAUTH_STATS(POOL_COUNTER_PREFIX(store, final_prefix))};
+}
+
+void ExtAuth::onSuccess(Http::MessagePtr&& response) {
+  auth_request_ = nullptr;
+  uint64_t response_code = Http::Utility::getResponseStatus(response->headers());
+  log().info("ExtAuth Auth responded with code {}", response_code);
+  if (response_code != enumToInt(Http::Code::OK)) {
+    rejectRequest();
+    return;
+  }
+  acceptRequest();
+}
+
+void ExtAuth::onFailure(Http::AsyncClient::FailureReason) {
+  auth_request_ = nullptr;
+  log().warn("ExtAuth Auth request failed");
+  config_->stats_.rq_failed_.inc();
+  rejectRequest();
 }
 
 void ExtAuth::acceptRequest() {
@@ -71,19 +100,6 @@ void ExtAuth::redirectRequest() {
   config_->stats_.rq_redirected_.inc();
   // TODO(ark3): Need a different response flag
   callbacks_->requestInfo().setResponseFlag(Http::AccessLog::ResponseFlag::FaultInjected);
-}
-
-void ExtAuth::onAuthResult(/* Http::HeaderMapPtr&& headers */) {
-  resetInternalState();
-  log().info("ExtAuth Auth Result received");
-
-  if (false) {
-    rejectRequest();
-  } else if (false) {
-    redirectRequest();
-  } else {
-    acceptRequest();
-  }
 }
 
 void ExtAuth::onDestroy() { resetInternalState(); }

@@ -35,7 +35,8 @@
                 "type": "decoder",
                 "name": "extauth",
                 "config": {
-                  "url": "http://httpbin.org/"
+                  "cluster": "httpbin.org",
+                  "timeout_ms": 5000
                 }
               },
               {
@@ -55,6 +56,17 @@
     "clusters": [
       {
         "name": "httpbin",
+        "type": "logical_dns",
+        "connect_timeout_ms": 5000,
+        "lb_type": "random",
+        "hosts": [
+          {
+            "url": "tcp://httpbin.org:80"
+          }
+        ]
+      },
+      {
+        "name": "httpbin.org",
         "type": "logical_dns",
         "connect_timeout_ms": 5000,
         "lb_type": "random",

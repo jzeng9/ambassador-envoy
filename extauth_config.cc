@@ -11,9 +11,10 @@ const std::string EXTAUTH_HTTP_FILTER_SCHEMA(R"EOF(
     "$schema": "http://json-schema.org/schema#",
     "type" : "object",
     "properties" : {
-      "url" : {"type" : "string"}
+      "cluster" : {"type" : "string"},
+      "timeout_ms": {"type" : "integer"}
     },
-    "required" : ["url"],
+    "required" : ["cluster", "timeout_ms"],
     "additionalProperties" : false
   }
   )EOF");
@@ -30,7 +31,9 @@ HttpFilterFactoryCb ExtAuthConfig::tryCreateFilterFactory(HttpFilterType type,
   json_config.validateSchema(EXTAUTH_HTTP_FILTER_SCHEMA);
 
   Http::ExtAuthConfigConstSharedPtr config(new Http::ExtAuthConfig{
-      Http::ExtAuth::generateStats(stats_prefix, server.stats()), json_config.getString("url")});
+      server.clusterManager(), Http::ExtAuth::generateStats(stats_prefix, server.stats()),
+      json_config.getString("cluster"),
+      std::chrono::milliseconds(json_config.getInteger("timeout_ms"))});
   return [config](Http::FilterChainFactoryCallbacks& callbacks) -> void {
     callbacks.addStreamDecoderFilter(Http::StreamDecoderFilterSharedPtr{new Http::ExtAuth(config)});
   };

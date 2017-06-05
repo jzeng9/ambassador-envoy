@@ -1,6 +1,7 @@
 #pragma once
 
 #include "envoy/http/filter.h"
+#include "envoy/upstream/cluster_manager.h"
 
 #include "common/common/logger.h"
 
@@ -29,8 +30,10 @@ struct ExtAuthStats {
  * Configuration for the extauth filter.
  */
 struct ExtAuthConfig {
+  Upstream::ClusterManager& cm_;
   ExtAuthStats stats_;
-  std::string url_;
+  std::string cluster_;
+  std::chrono::milliseconds timeout_;
 };
 
 typedef std::shared_ptr<const ExtAuthConfig> ExtAuthConfigConstSharedPtr;
@@ -38,7 +41,9 @@ typedef std::shared_ptr<const ExtAuthConfig> ExtAuthConfigConstSharedPtr;
 /**
  * A pass-through filter that talks to an external authn/authz service (or will soon...)
  */
-class ExtAuth : Logger::Loggable<Logger::Id::filter>, public StreamDecoderFilter {
+class ExtAuth : Logger::Loggable<Logger::Id::filter>,
+                public StreamDecoderFilter,
+                public Http::AsyncClient::Callbacks {
 public:
   ExtAuth(ExtAuthConfigConstSharedPtr config);
   ~ExtAuth();
@@ -54,6 +59,10 @@ public:
   FilterTrailersStatus decodeTrailers(HeaderMap& trailers) override;
   void setDecoderFilterCallbacks(StreamDecoderFilterCallbacks& callbacks) override;
 
+  // Http::AsyncClient::Callbacks
+  void onSuccess(Http::MessagePtr&& response) override;
+  void onFailure(Http::AsyncClient::FailureReason reason) override;
+
 private:
   void resetInternalState();
   void acceptRequest();
@@ -65,6 +74,7 @@ private:
   ExtAuthConfigConstSharedPtr config_;
   StreamDecoderFilterCallbacks* callbacks_{};
   bool auth_complete_;
+  Http::AsyncClient::Request* auth_request_{};
   Event::TimerPtr delay_timer_;
 };
 
