@@ -1,2 +1,2 @@
-[*.{json,cc,h}]
+[*.{js,json,cc,h}]
 indent_size = 2
