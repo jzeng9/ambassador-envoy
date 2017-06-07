@@ -65,17 +65,11 @@ public:
 
 private:
   void resetInternalState();
-  void acceptRequest();
-  void rejectRequest();
-  void redirectRequest();
-
-  void onAuthResult(/* Http::HeaderMapPtr&& headers */);
 
   ExtAuthConfigConstSharedPtr config_;
   StreamDecoderFilterCallbacks* callbacks_{};
   bool auth_complete_;
   Http::AsyncClient::Request* auth_request_{};
-  Event::TimerPtr delay_timer_;
 };
 
 } // Http

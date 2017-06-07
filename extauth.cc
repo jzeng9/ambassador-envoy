@@ -12,10 +12,7 @@ static LowerCaseString header_to_add(std::string("x-ark3-stuff"));
 
 ExtAuth::ExtAuth(ExtAuthConfigConstSharedPtr config) : config_(config) {}
 
-ExtAuth::~ExtAuth() {
-  ASSERT(!delay_timer_);
-  ASSERT(!auth_request_);
-}
+ExtAuth::~ExtAuth() { ASSERT(!auth_request_); }
 
 FilterHeadersStatus ExtAuth::decodeHeaders(HeaderMap& headers, bool) {
   log().info("ExtAuth Request received; contacting auth server");
@@ -74,58 +71,41 @@ ExtAuthStats ExtAuth::generateStats(const std::string& prefix, Stats::Store& sto
 void ExtAuth::onSuccess(Http::MessagePtr&& response) {
   auth_request_ = nullptr;
   uint64_t response_code = Http::Utility::getResponseStatus(response->headers());
+  std::string response_body(response->bodyAsString());
   log().info("ExtAuth Auth responded with code {}", response_code);
+  if (!response_body.empty()) {
+    log().info("ExtAuth Auth said: {}", response->bodyAsString());
+  }
+
   if (response_code != enumToInt(Http::Code::OK)) {
-    rejectRequest();
+    log().info("ExtAuth rejecting request");
+    config_->stats_.rq_rejected_.inc();
+    Http::HeaderMapPtr response_headers{new HeaderMapImpl(response->headers())};
+    callbacks_->encodeHeaders(std::move(response_headers), response_body.empty());
+    if (!response_body.empty()) {
+      Buffer::OwnedImpl buffer(response_body);
+      callbacks_->encodeData(buffer, true);
+    }
     return;
   }
-  acceptRequest();
+
+  log().info("ExtAuth accepting request");
+  config_->stats_.rq_passed_.inc();
+  auth_complete_ = true;
+  callbacks_->continueDecoding();
 }
 
 void ExtAuth::onFailure(Http::AsyncClient::FailureReason) {
   auth_request_ = nullptr;
   log().warn("ExtAuth Auth request failed");
   config_->stats_.rq_failed_.inc();
-  rejectRequest();
-}
-
-void ExtAuth::acceptRequest() {
-  log().info("ExtAuth accepting request");
-  auth_complete_ = true;
-  config_->stats_.rq_passed_.inc();
-  callbacks_->continueDecoding();
-}
-
-void ExtAuth::rejectRequest() {
-  log().info("ExtAuth rejecting request");
-  Http::HeaderMapPtr response_headers{
-      new HeaderMapImpl{{Headers::get().Status, std::string("403")}}};
-  callbacks_->encodeHeaders(std::move(response_headers), true);
-  config_->stats_.rq_rejected_.inc();
-  // TODO(ark3): Need a different response flag
-  callbacks_->requestInfo().setResponseFlag(Http::AccessLog::ResponseFlag::FaultInjected);
-}
-
-void ExtAuth::redirectRequest() {
-  log().info("ExtAuth redirecting request");
-  Http::HeaderMapPtr response_headers{
-      new HeaderMapImpl{{Headers::get().Status, std::string("307")}}};
-  // TODO(ark3): Need to set the Location header here
-  response_headers->addStaticKey(header_to_add, std::string("Hello world"));
-  callbacks_->encodeHeaders(std::move(response_headers), true);
-  config_->stats_.rq_redirected_.inc();
-  // TODO(ark3): Need a different response flag
-  callbacks_->requestInfo().setResponseFlag(Http::AccessLog::ResponseFlag::FaultInjected);
+  Http::Utility::sendLocalReply(*callbacks_, Http::Code::ServiceUnavailable,
+                                std::string("Auth request failed."));
 }
 
 void ExtAuth::onDestroy() { resetInternalState(); }
 
-void ExtAuth::resetInternalState() {
-  if (delay_timer_) {
-    delay_timer_->disableTimer();
-    delay_timer_.reset();
-  }
-}
+void ExtAuth::resetInternalState() {}
 
 void ExtAuth::setDecoderFilterCallbacks(StreamDecoderFilterCallbacks& callbacks) {
   callbacks_ = &callbacks;
