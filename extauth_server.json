@@ -1,7 +1,7 @@
 {
   "listeners": [
     {
-      "address": "tcp://127.0.0.1:9999",
+      "address": "tcp://0.0.0.0:9999",
       "use_original_dst": true,
       "filters": [
         {
@@ -18,13 +18,20 @@
             "route_config": {
               "virtual_hosts": [
                 {
-                  "name": "httpbin",
+                  "name": "api_gateway",
                   "domains": ["*"],
                   "routes": [
                     {
-                      "prefix": "/",
+                      "prefix": "/service",
                       "cluster": "httpbin",
-                      "auto_host_rewrite": true
+                      "auto_host_rewrite": true,
+                      "prefix_rewrite": "/"
+                    },
+                    {
+                      "prefix": "/auth",
+                      "cluster": "httpbin",
+                      "auto_host_rewrite": true,
+                      "prefix_rewrite": "/"
                     }
                   ]
                 }
@@ -35,7 +42,7 @@
                 "type": "decoder",
                 "name": "extauth",
                 "config": {
-                  "cluster": "httpbin.org",
+                  "cluster": "auth",
                   "timeout_ms": 5000
                 }
               },
@@ -66,13 +73,13 @@
         ]
       },
       {
-        "name": "httpbin.org",
+        "name": "auth",
         "type": "logical_dns",
         "connect_timeout_ms": 5000,
         "lb_type": "random",
         "hosts": [
           {
-            "url": "tcp://httpbin.org:80"
+            "url": "tcp://docker.for.mac.localhost:3000"
           }
         ]
       }
