@@ -17,14 +17,13 @@ onmaster () {
 }
 
 if onmaster; then
-    #git checkout ${TRAVIS_BRANCH}
-    echo "No checkout"
+    git checkout ${TRAVIS_BRANCH}
 fi
 
 # Perform the build
 git submodule update --init
 mkdir -p dist
-docker run -it --rm -u root:root -v $TRAVIS_BUILD_DIR:/source \
+docker run -it --rm -v $TRAVIS_BUILD_DIR:/source \
     lyft/envoy-build:$ENVOY_BUILD_SHA /bin/bash /source/travis-build-docker.sh
 docker build -t datawire/ambassador-envoy:latest .
 docker tag datawire/ambassador-envoy:latest datawire/ambassador-envoy:$COMMIT
