@@ -87,7 +87,7 @@ The Envoy binary is found in the `bazel-bin` directory. Launch Envoy using the s
 
 Now you can access Envoy and the services configured under it on port 9999 from another terminal:
 
-    $ curl -v 127.0.0.1:9999/get
+    $ curl -v 127.0.0.1:9999/service/get
     *   Trying 127.0.0.1...
     * TCP_NODELAY set
     * Connected to 127.0.0.1 (127.0.0.1) port 9999 (#0)
@@ -120,7 +120,108 @@ Let's launch the [sample auth server][as].
 
 [as]: https://github.com/datawire/ambassador-auth-service
 
-TODO: Fill in the rest of this.
+    $ docker pull datawire/ambassador-auth-service:latest
+    latest: Pulling from datawire/ambassador-auth-service
+    2aecc7e1714b: Pull complete
+    8c9904a62f4c: Pull complete
+    03e43cd0c4c3: Pull complete
+    ea2ca032df77: Pull complete
+    cf5c747aca5b: Pull complete
+    Digest: sha256:78c46829e124be43a6976fea53a6e120f6c9ce24ef68782bdedf55d7acd4b9c5
+    Status: Downloaded newer image for datawire/ambassador-auth-service:latest
+
+    $ docker run -it --rm -p 3000:3000 datawire/ambassador-auth-service:latest
+
+    > authserver@1.0.0 start /src
+    > node server.js
+
+    Example app listening on port 3000!
+
+Now try to access your service without credentials:
+
+    $ curl -v 127.0.0.1:9999/service/get
+    *   Trying 127.0.0.1...
+    * TCP_NODELAY set
+    * Connected to 127.0.0.1 (127.0.0.1) port 9999 (#0)
+    > GET /service/get HTTP/1.1
+    > Host: 127.0.0.1:9999
+    > User-Agent: curl/7.51.0
+    > Accept: */*
+    >
+    < HTTP/1.1 401 Unauthorized
+    < x-powered-by: Express
+    < www-authenticate: Basic realm="Ambassador Realm"
+    < date: Wed, 14 Jun 2017 21:26:17 GMT
+    < content-length: 0
+    < x-envoy-upstream-service-time: 28
+    < server: envoy
+    <
+    * Curl_http_done: called premature == 0
+    * Connection #0 to host 127.0.0.1 left intact
+
+You receive the exact output of the auth service, in this case a 401. Try again with credentials:
+
+    $ curl -u username:password -v 127.0.0.1:9999/service/get
+    *   Trying 127.0.0.1...
+    * TCP_NODELAY set
+    * Connected to 127.0.0.1 (127.0.0.1) port 9999 (#0)
+    * Server auth using Basic with user 'username'
+    > GET /service/get HTTP/1.1
+    > Host: 127.0.0.1:9999
+    > Authorization: Basic dXNlcm5hbWU6cGFzc3dvcmQ=
+    > User-Agent: curl/7.51.0
+    > Accept: */*
+    >
+    < HTTP/1.1 200 OK
+    < server: envoy
+    < date: Wed, 14 Jun 2017 21:26:23 GMT
+    < content-type: application/json
+    < access-control-allow-origin: *
+    < access-control-allow-credentials: true
+    < x-powered-by: Flask
+    < x-processed-time: 0.00169396400452
+    < content-length: 364
+    < via: 1.1 vegur
+    < x-envoy-upstream-service-time: 472
+    <
+    {
+      "args": {},
+      "headers": {
+        "Accept": "*/*",
+        "Authorization": "Basic dXNlcm5hbWU6cGFzc3dvcmQ=",
+        "Connection": "close",
+        "Host": "httpbin.org",
+        "User-Agent": "curl/7.51.0",
+        "X-Envoy-Expected-Rq-Timeout-Ms": "15000",
+        "X-Envoy-Original-Path": "/service/get"
+      },
+      "origin": "204.148.29.50",
+      "url": "http://httpbin.org/get"
+    }
+    * Curl_http_done: called premature == 0
+    * Connection #0 to host 127.0.0.1 left intact
+
+You receive the output of your service, which in this example is [httpbin.org](http://httpbin.org/).
+
+The Envoy side of things looks as you would expect. No credentials:
+
+    [2017-06-14 21:26:17.859][30598][info][main] [C20] new connection
+    [2017-06-14 21:26:17.860][30598][info][filter] ExtAuth Request received; contacting auth server
+    [2017-06-14 21:26:17.860][30598][info][client] [C21] connecting
+    [2017-06-14 21:26:17.889][30598][info][filter] ExtAuth Auth responded with code 401
+    [2017-06-14 21:26:17.889][30598][info][filter] ExtAuth rejecting request
+    [2017-06-14 21:26:17.891][30598][info][main] [C20] adding to cleanup list
+
+With credentials:
+
+    [2017-06-14 21:26:23.603][30597][info][main] [C22] new connection
+    [2017-06-14 21:26:23.604][30597][info][filter] ExtAuth Request received; contacting auth server
+    [2017-06-14 21:26:23.604][30597][info][client] [C23] connecting
+    [2017-06-14 21:26:23.615][30597][info][filter] ExtAuth Auth responded with code 200
+    [2017-06-14 21:26:23.615][30597][info][filter] ExtAuth Auth said: OK
+    [2017-06-14 21:26:23.615][30597][info][filter] ExtAuth accepting request
+    [2017-06-14 21:26:23.616][30597][info][client] [C24] connecting
+    [2017-06-14 21:26:24.091][30597][info][main] [C22] adding to cleanup list
 
 
 ## How it works
