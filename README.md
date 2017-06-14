@@ -1,27 +1,127 @@
-# Envoy filter example
+# Ambassador Envoy
 
-This project demonstrates the linking of additional filters with the Envoy binary.
-A new filter `extauth` is introduced, identical modulo renaming to the existing
-[`echo`](https://github.com/lyft/envoy/blob/master/source/common/filter/echo.h)
-filter. Integration tests demonstrating the filter's end-to-end behavior are
-also provided.
+This repo contains Ambassador's external authentication filter for [Lyft Envoy][en]. The Travis configuration for this repo builds an Envoy binary (at tag 1.3.0) that includes the ExtAuth filter. It then creates a [Docker image for Ambassador][ad] using that binary.
+
+[en]: https://lyft.github.io/envoy/
+[ad]: https://hub.docker.com/r/datawire/ambassador-envoy/tags/
+
+See [Ambassador][ag] and [its documentation][aw] for more information.
+
+[ag]: https://github.com/datawire/ambassador
+[aw]: http://www.getambassador.io/
 
 ## Building
 
-To build the Envoy static binary:
+If you don't have a [build environment for Envoy][be], you can use Docker to set one up.
 
-1. `git submodule update --init`
-2. `bazel build //:envoy`
+[be]: https://github.com/lyft/envoy/blob/master/bazel/README.md
+
+    $ fgrep ENVOY_BUILD_SHA .travis.yml
+      - ENVOY_BUILD_SHA=fc747b3c2fd49b1260484572071fe4194cd6824d
+
+    $ docker run -it -p 9999:9999 --name envoy-build lyft/envoy-build:fc747b3c2fd49b1260484572071fe4194cd6824d /bin/bash
+
+    root@e30a286b80c5:/# cd
+
+Once your build environment is ready, grab a copy of the source code and build.
+
+    root@e30a286b80c5:~# git clone https://github.com/datawire/ambassador-envoy
+    Cloning into 'ambassador-envoy'...
+    remote: Counting objects: 144, done.
+    remote: Compressing objects: 100% (18/18), done.
+    remote: Total 144 (delta 7), reused 20 (delta 4), pack-reused 121
+    Receiving objects: 100% (144/144), 40.43 KiB | 0 bytes/s, done.
+    Resolving deltas: 100% (66/66), done.
+    Checking connectivity... done.
+
+    root@e30a286b80c5:~# cd ambassador-envoy
+
+    root@e30a286b80c5:~/ambassador-envoy# git submodule update --init
+    Submodule 'envoy' (https://github.com/lyft/envoy.git) registered for path 'envoy'
+    Cloning into 'envoy'...
+    remote: Counting objects: 72332, done.
+    remote: Compressing objects: 100% (191/191), done.
+    remote: Total 72332 (delta 127), reused 28 (delta 7), pack-reused 72132
+    Receiving objects: 100% (72332/72332), 24.44 MiB | 6.75 MiB/s, done.
+    Resolving deltas: 100% (60008/60008), done.
+    Checking connectivity... done.
+    Submodule path 'envoy': checked out '3afc7712a04907ffd25ed497626639febfe65735'
+
+    root@e30a286b80c5:~/ambassador-envoy# bazel build -c dbg //:envoy
+    [... many lines of Bazel output ...]
+    INFO: Found 1 target...
+    Target //:envoy up-to-date:
+      bazel-bin/envoy
+    INFO: Elapsed time: 657.911s, Critical Path: 238.94s
+
 
 ## Testing
 
-To run the `extauth` integration test:
+The Envoy binary is found in the `bazel-bin` directory. Launch Envoy using the sample configuration as follows. The redirect/pipe through `egrep` serves to highlight log output from the ExtAuth filter. This can make it easier to spot relevant messages.
 
-`bazel test //:extauth_integration_test`
+    root@e30a286b80c5:~/ambassador-envoy# bazel-bin/envoy -c extauth_server.json -l info 2>&1 | egrep --color 'ExtAuth|$'
+    [2017-06-14 20:51:49.758][30594][warning][main] initializing epoch 0 (hot restart version=8.2490552)
+    [2017-06-14 20:51:49.768][30594][info][main] admin address: 127.0.0.1:0
+    [2017-06-14 20:51:49.770][30594][info][upstream] cm init: adding: cluster=httpbin primary=1 secondary=0
+    [2017-06-14 20:51:49.772][30594][info][upstream] cm init: adding: cluster=auth primary=2 secondary=0
+    [2017-06-14 20:51:49.772][30594][info][config] loading 1 listener(s)
+    [2017-06-14 20:51:49.772][30594][info][config] listener #0:
+    [2017-06-14 20:51:49.772][30594][info][config]   address=0.0.0.0:9999
+    [2017-06-14 20:51:49.772][30594][info][config]   filter #0:
+    [2017-06-14 20:51:49.772][30594][info][config]     type: read
+    [2017-06-14 20:51:49.772][30594][info][config]     name: http_connection_manager
+    [2017-06-14 20:51:49.775][30594][info][config]     filter #0
+    [2017-06-14 20:51:49.775][30594][info][config]       type: decoder
+    [2017-06-14 20:51:49.775][30594][info][config]       name: extauth
+    [2017-06-14 20:51:49.775][30594][info][config]     filter #1
+    [2017-06-14 20:51:49.775][30594][info][config]       type: decoder
+    [2017-06-14 20:51:49.775][30594][info][config]       name: router
+    [2017-06-14 20:51:49.775][30594][info][config] loading tracing configuration
+    [2017-06-14 20:51:49.775][30594][warning][main] starting main dispatch loop
+    [2017-06-14 20:51:49.794][30594][info][upstream] cm init: removing: cluster=auth primary=1 secondary=0
+    [2017-06-14 20:51:49.794][30594][info][upstream] cm init: removing: cluster=httpbin primary=0 secondary=0
+    [2017-06-14 20:51:49.794][30594][warning][main] all clusters initialized. initializing init manager
+    [2017-06-14 20:51:49.794][30594][warning][main] all dependencies initialized. starting workers
+    [2017-06-14 20:51:49.795][30597][info][main] worker entering dispatch loop
+    [2017-06-14 20:51:49.795][30598][info][main] worker entering dispatch loop
 
-To run the regular Envoy tests from this project:
+Now you can access Envoy and the services configured under it on port 9999 from another terminal:
 
-`bazel test @envoy//...`
+    $ curl -v 127.0.0.1:9999/get
+    *   Trying 127.0.0.1...
+    * TCP_NODELAY set
+    * Connected to 127.0.0.1 (127.0.0.1) port 9999 (#0)
+    > GET /get HTTP/1.1
+    > Host: 127.0.0.1:9999
+    > User-Agent: curl/7.51.0
+    > Accept: */*
+    >
+    < HTTP/1.1 503 Service Unavailable
+    < content-length: 57
+    < content-type: text/plain
+    < date: Wed, 14 Jun 2017 20:54:16 GMT
+    < server: envoy
+    <
+    * Curl_http_done: called premature == 0
+    * Connection #0 to host 127.0.0.1 left intact
+    upstream connect error or disconnect/reset before headers
+
+Envoy returns 503 Service Unavailable because it cannot reach the configured auth server. A look at Envoy's output makes this evident:
+
+    [2017-06-14 20:53:41.225][30598][info][main] [C1] new connection
+    [2017-06-14 20:53:41.227][30598][info][filter] ExtAuth Request received; contacting auth server
+    [2017-06-14 20:53:41.228][30598][info][client] [C2] connecting
+    [2017-06-14 20:53:41.228][30598][info][filter] ExtAuth Auth responded with code 503
+    [2017-06-14 20:53:41.228][30598][info][filter] ExtAuth Auth said: upstream connect error or disconnect/reset before headers
+    [2017-06-14 20:53:41.228][30598][info][filter] ExtAuth rejecting request
+    [2017-06-14 20:53:41.230][30598][info][main] [C1] adding to cleanup list
+
+Let's launch the [sample auth server][as].
+
+[as]: https://github.com/datawire/ambassador-auth-service
+
+TODO: Fill in the rest of this.
+
 
 ## How it works
 
