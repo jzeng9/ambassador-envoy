@@ -10,6 +10,12 @@ See [Ambassador][ag] and [its documentation][aw] for more information.
 [ag]: https://github.com/datawire/ambassador
 [aw]: http://www.getambassador.io/
 
+
+## ExtAuth
+
+When ExtAuth receives a client request, it asks the configured auth service what to do with the client request. ExtAuth sends a POST request to the auth service at the path `/post` with body content containing a JSON mapping of the request headers in HTTP2 style, e.g., `:authority` instead of `Host`. If ExtAuth cannot reach the auth service, it returns 503 to the client. If the auth service response code is 200, then ExtAuth allows the client request to be resume being processed by the normal Envoy flow. This will typically mean that the client will receive the expected response to its request. If ExtAuth receives any response from the auth service other than 200, it returns that full response (header and body) to the client. ExtAuth assumes the auth service will return an appropriate response, such as 401.
+
+
 ## Building
 
 If you don't have a [build environment for Envoy][be], you can use Docker to set one up.
@@ -224,12 +230,12 @@ With credentials:
     [2017-06-14 21:26:24.091][30597][info][main] [C22] adding to cleanup list
 
 
-## How it works
+## How the build works
 
 The [Envoy repository](https://github.com/lyft/envoy/) is provided as a submodule.
 The [`WORKSPACE`](WORKSPACE) file maps the `@envoy` repository to this local path.
 
 The [`BUILD`](BUILD) file introduces a new Envoy static binary target, `envoy`,
 that links together the new filter and `@envoy//source/exe:envoy_main_lib`. The
-`extauth` filter registers itself during the static initialization phase of the
+ExtAuth filter registers itself during the static initialization phase of the
 Envoy binary as a new filter.
