@@ -34,7 +34,7 @@ FilterHeadersStatus ExtAuth::decodeHeaders(HeaderMap& headers, bool) {
   auth_complete_ = false;
   MessagePtr request(new RequestMessageImpl());
   request->headers().insertMethod().value(Http::Headers::get().MethodValues.Post);
-  request->headers().insertPath().value(std::string("/post"));
+  request->headers().insertPath().value(std::string("/ambassador/auth"));
   request->headers().insertHost().value(config_->cluster_); // cluster name is Host: header value!
   request->headers().insertContentType().value(std::string("application/json"));
   request->headers().insertContentLength().value(request_body.size());
