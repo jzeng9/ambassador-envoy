@@ -34,8 +34,8 @@ HttpFilterFactoryCb ExtAuthConfig::tryCreateFilterFactory(HttpFilterType type,
       server.clusterManager(), Http::ExtAuth::generateStats(stats_prefix, server.stats()),
       json_config.getString("cluster"),
       std::chrono::milliseconds(json_config.getInteger("timeout_ms"))});
-  return [config](Http::FilterChainFactoryCallbacks& callbacks) -> void {
-    callbacks.addStreamDecoderFilter(Http::StreamDecoderFilterSharedPtr{new Http::ExtAuth(config)});
+  return [config, ++count](Http::FilterChainFactoryCallbacks& callbacks) -> void {
+    callbacks.addStreamDecoderFilter(Http::StreamDecoderFilterSharedPtr{new Http::ExtAuth(config, ++count)});
   };
 }
 

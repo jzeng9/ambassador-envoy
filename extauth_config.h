@@ -19,6 +19,8 @@ public:
                                              const Json::Object& json_config,
                                              const std::string& stats_prefix,
                                              Server::Instance& server) override;
+private:
+  int count = 0;
 };
 
 } // Configuration

@@ -45,7 +45,7 @@ class ExtAuth : Logger::Loggable<Logger::Id::filter>,
                 public StreamDecoderFilter,
                 public Http::AsyncClient::Callbacks {
 public:
-  ExtAuth(ExtAuthConfigConstSharedPtr config);
+  ExtAuth(ExtAuthConfigConstSharedPtr config, int count);
   ~ExtAuth();
 
   static ExtAuthStats generateStats(const std::string& prefix, Stats::Store& store);
@@ -68,7 +68,7 @@ private:
   StreamDecoderFilterCallbacks* callbacks_{};
   bool auth_complete_;
   Http::AsyncClient::Request* auth_request_{};
-  int count;
+  int count_;
 };
 
 } // Http
