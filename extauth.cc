@@ -15,7 +15,7 @@ ExtAuth::ExtAuth(ExtAuthConfigConstSharedPtr config) : config_(config), count() 
 ExtAuth::~ExtAuth() { ASSERT(!auth_request_); }
 
 FilterHeadersStatus ExtAuth::decodeHeaders(HeaderMap& headers, bool) {
-  log().info("ExtAuth Request received; contacting auth server%d", count++);
+  log().info("ExtAuth Request received; contacting auth server {}", count++);
 
   // Copy original headers as a JSON object
   std::string json("{");
