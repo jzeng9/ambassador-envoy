@@ -10,12 +10,12 @@ namespace Http {
 
 static LowerCaseString header_to_add(std::string("x-ark3-stuff"));
 
-ExtAuth::ExtAuth(ExtAuthConfigConstSharedPtr config, int count) : config_(config), count_(count) {}
+ExtAuth::ExtAuth(ExtAuthConfigConstSharedPtr config) : config_(config) {}
 
 ExtAuth::~ExtAuth() { ASSERT(!auth_request_); }
 
 FilterHeadersStatus ExtAuth::decodeHeaders(HeaderMap& headers, bool) {
-  log().info("ExtAuth Request received; contacting auth server {}", count_);
+  log().info("ExtAuth Request received; contacting auth servers");
   return FilterHeadersStatus::StopIteration;
 
   // Copy original headers as a JSON object
@@ -51,7 +51,7 @@ FilterHeadersStatus ExtAuth::decodeHeaders(HeaderMap& headers, bool) {
 }
 
 FilterDataStatus ExtAuth::decodeData(Buffer::Instance&, bool) {
-  log().info("ExtAuth Request received; contacting auth server11 {}", count_);
+  log().info("ExtAuth Request received; contacting auth server11");
   if (auth_complete_) {
     return FilterDataStatus::Continue;
   }
