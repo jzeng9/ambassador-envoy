@@ -16,7 +16,7 @@ ExtAuth::~ExtAuth() { ASSERT(!auth_request_); }
 
 FilterHeadersStatus ExtAuth::decodeHeaders(HeaderMap& headers, bool) {
   log().info("ExtAuth Request received; contacting auth servers");
-  return FilterHeadersStatus::Continue;
+  return FilterHeadersStatus::StopIteration;
 
   // Copy original headers as a JSON object
   std::string json("{");
