@@ -24,13 +24,3 @@ To run the `echo2` integration test:
 To run the regular Envoy tests from this project:
 
 `bazel test @envoy//test/...`
-
-## How it works
-
-The [Envoy repository](https://github.com/envoyproxy/envoy/) is provided as a submodule.
-The [`WORKSPACE`](WORKSPACE) file maps the `@envoy` repository to this local path.
-
-The [`BUILD`](BUILD) file introduces a new Envoy static binary target, `envoy`,
-that links together the new filter and `@envoy//source/exe:envoy_main_lib`. The
-`echo2` filter registers itself during the static initialization phase of the
-Envoy binary as a new filter.
